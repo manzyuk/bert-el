@@ -122,8 +122,11 @@
   (bindat-get-field struct 'characters))
 
 (defun bert-decode-list (struct)
-  (let ((elements (bindat-get-field struct 'elements)))
-    (mapcar #'bert-decode elements)))
+  (let* ((elements (bindat-get-field struct 'elements))
+         (tail (bindat-get-field struct 'tail))
+         (list (mapcar #'bert-decode elements)))
+    (setcdr (last list) (bert-decode tail))
+    list))
 
 (defun bert-decode-binary (struct)
   (map 'string #'identity (bindat-get-field struct 'data)))
