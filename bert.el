@@ -41,6 +41,7 @@
         ((listp    obj) (bert-encode-list    obj))
         ((vectorp  obj) (bert-encode-vector  obj))
         ((stringp  obj) (bert-encode-string  obj))
+        ((hash-table-p obj) (bert-encode-hash-table obj))
         (t (error "cannot encode %S" obj))))
 
 (defun bert-encode-integer (integer)
@@ -57,7 +58,7 @@
       (float-string . ,float-string))))
 
 (defun bert-encode-symbol (symbol)
-  (let ((atom-name (symbol-name sym)))
+  (let ((atom-name (symbol-name symbol)))
     `((tag . 100)
       (length . ,(length atom-name))
       (atom-name . ,atom-name))))
@@ -80,6 +81,13 @@
     (length . ,(length string))
     (data . ,(string-to-vector string))))
 
+(defun bert-encode-hash-table (hash-table)
+  (let (table)
+    (maphash (lambda (key value)
+               (push (vector key value) table))
+             hash-table)
+    (bert-encode (vector 'bert 'dict table))))
+
 (defun bert-unpack (string)
   (let* ((struct (bindat-unpack (cons (list 'magic 'u8) bert-spec) string))
          (magic (bindat-get-field struct 'magic)))
@@ -92,7 +100,7 @@
     (98  (bert-decode-integer struct))
     (99  (bert-decode-float struct))
     (100 (bert-decode-atom struct))
-    ((104 105) (bert-decode-tuple struct))
+    ((104 105) (bert-decode-complex struct))
     (106 nil)
     (107 (bert-decode-string struct))
     (108 (bert-decode-list struct))
@@ -114,9 +122,22 @@
 (defun bert-decode-atom (struct)
   (intern (bindat-get-field struct 'atom-name)))
 
+(defun bert-decode-complex (struct)
+  (let ((tuple (bert-decode-tuple struct)))
+    (if (eq (aref tuple 0) 'bert)
+        (case (aref tuple 1)
+          (dict (bert-decode-dict (aref tuple 2)))
+          (t tuple))
+      tuple)))
+
 (defun bert-decode-tuple (struct)
   (let ((elements (bindat-get-field struct 'elements)))
     (apply #'vector (mapcar #'bert-decode elements))))
+
+(defun bert-decode-dict (table)
+  (let ((hash-table (make-hash-table)))
+    (dolist (row table hash-table)
+      (puthash (aref row 0) (aref row 1) hash-table))))
 
 (defun bert-decode-string (struct)
   (bindat-get-field struct 'characters))
