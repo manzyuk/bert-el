@@ -58,10 +58,12 @@
       (float-string . ,float-string))))
 
 (defun bert-encode-symbol (symbol)
-  (let ((atom-name (symbol-name symbol)))
+  (let* ((name (symbol-name symbol))
+         (len (length name)))
+    (assert (< len 256) t "symbol name is too long (>= 256): %S" symbol)
     `((tag . 100)
-      (length . ,(length atom-name))
-      (atom-name . ,atom-name))))
+      (length . ,len)
+      (atom-name . ,name))))
 
 (defun bert-encode-vector (data)
   `((tag . ,(if (< (length data) 256) 104 105))
