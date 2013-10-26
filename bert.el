@@ -79,3 +79,51 @@
   `((tag . 109)
     (length . ,(length string))
     (data . ,(string-to-vector string))))
+
+(defun bert-unpack (string)
+  (let* ((struct (bindat-unpack (cons (list 'magic 'u8) bert-spec) string))
+         (magic (bindat-get-field struct 'magic)))
+    (assert (= magic 131) t "bad magic: %d" magic)
+    (bert-decode struct)))
+
+(defun bert-decode (struct)
+  (case (bindat-get-field struct 'tag)
+    (97  (bert-decode-small-integer struct))
+    (98  (bert-decode-integer struct))
+    (99  (bert-decode-float struct))
+    (100 (bert-decode-atom struct))
+    ((104 105) (bert-decode-tuple struct))
+    (106 nil)
+    (107 (bert-decode-string struct))
+    (108 (bert-decode-list struct))
+    (109 (bert-decode-binary struct))
+    ((110 111) (error "cannot decode bignums"))))
+
+(defun bert-decode-small-integer (struct)
+  (bindat-get-field struct 'integer))
+
+(defun bert-decode-integer (struct)
+  (let ((integer (bindat-get-field struct 'integer)))
+    (if (oddp (ash integer -31))
+        (- integer (ash 1 32))
+      integer)))
+
+(defun bert-decode-float (struct)
+  (read (bindat-get-field struct 'float-string)))
+
+(defun bert-decode-atom (struct)
+  (intern (bindat-get-field struct 'atom-name)))
+
+(defun bert-decode-tuple (struct)
+  (let ((elements (bindat-get-field struct 'elements)))
+    (apply #'vector (mapcar #'bert-decode elements))))
+
+(defun bert-decode-string (struct)
+  (bindat-get-field struct 'characters))
+
+(defun bert-decode-list (struct)
+  (let ((elements (bindat-get-field struct 'elements)))
+    (mapcar #'bert-decode elements)))
+
+(defun bert-decode-binary (struct)
+  (map 'string #'identity (bindat-get-field struct 'data)))
