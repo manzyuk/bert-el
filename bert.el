@@ -110,8 +110,7 @@
 
 (defun bert-decode (struct)
   (case (bindat-get-field struct 'tag)
-    (97        (bert-decode-small-integer struct))
-    (98        (bert-decode-integer       struct))
+    ((97 98)   (bert-decode-integer       struct))
     (99        (bert-decode-float         struct))
     (100       (bert-decode-atom          struct))
     ((104 105) (bert-decode-complex       struct))
@@ -120,9 +119,6 @@
     (108       (bert-decode-list          struct))
     (109       (bert-decode-binary        struct))
     ((110 111) (error "cannot decode bignums"))))
-
-(defun bert-decode-small-integer (struct)
-  (bindat-get-field struct 'integer))
 
 (defun bert-decode-integer (struct)
   (bindat-get-field struct 'integer))
