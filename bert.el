@@ -329,3 +329,5 @@
                  (= (hash-table-count obj) 2)
                  (equal (gethash 1 obj) "a")
                  (equal (gethash 2 obj) "b")))))
+
+(provide 'bert)
