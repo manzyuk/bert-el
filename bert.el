@@ -32,8 +32,8 @@
                 (digits vec (length))))))
 
 (defun bert-pack (obj)
-  (bindat-pack (cons (list 'magic 'u8) bert-bindat-spec)
-               (cons (cons 'magic 131) (bert-encode obj))))
+  (bindat-pack `((magic u8) ,@bert-bindat-spec)
+               `((magic . 131) ,@(bert-encode obj))))
 
 (defadvice bert-pack (around bert-pack-around activate)
   (letf (((symbol-function 'lsh) #'ash))
@@ -99,7 +99,7 @@
 
 (defun bert-unpack (string)
   (let* ((struct
-          (bindat-unpack (cons (list 'magic 'u8) bert-bindat-spec) string))
+          (bindat-unpack `((magic u8) ,@bert-bindat-spec) string))
          (magic (bindat-get-field struct 'magic)))
     (assert (= magic 131) t "bad magic: %d" magic)
     (bert-decode struct)))
