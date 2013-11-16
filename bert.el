@@ -30,7 +30,7 @@
            (111 (length u32)
                 (sign u8)
                 (digits vec (length)))))
-  "Structure specification of BERT without the magic number.
+  "Structure specification of BERT (without the magic number).
 
 See http://bert-rpc.org/ for more details.")
 
