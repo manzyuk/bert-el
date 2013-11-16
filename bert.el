@@ -48,7 +48,6 @@
         ((symbolp      obj) (bert-encode-symbol     obj))
         ((vectorp      obj) (bert-encode-vector     obj))
         ((stringp      obj) (bert-encode-string     obj))
-        ((hash-table-p obj) (bert-encode-hash-table obj))
         (t (error "cannot encode %S" obj))))
 
 (defun bert-encode-integer (integer)
@@ -90,13 +89,6 @@
     (length . ,(length string))
     (data . ,(string-to-vector string))))
 
-(defun bert-encode-hash-table (hash-table)
-  (let (table)
-    (maphash (lambda (key value)
-               (push (vector key value) table))
-             hash-table)
-    (bert-encode (vector 'bert 'dict table))))
-
 (defun bert-unpack (string)
   (let* ((struct
           (bindat-unpack `((magic u8) ,@bert-bindat-spec) string))
@@ -113,7 +105,7 @@
     ((97 98)   (bert-decode-integer struct))
     (99        (bert-decode-float   struct))
     (100       (bert-decode-atom    struct))
-    ((104 105) (bert-decode-complex struct))
+    ((104 105) (bert-decode-tuple   struct))
     (106       nil)
     (107       (bert-decode-string  struct))
     (108       (bert-decode-list    struct))
@@ -129,23 +121,9 @@
 (defun bert-decode-atom (struct)
   (intern (bindat-get-field struct 'atom-name)))
 
-(defun bert-decode-complex (struct)
-  (let ((tuple (bert-decode-tuple struct)))
-    (if (and (> (length tuple) 2)
-             (eq (aref tuple 0) 'bert))
-        (case (aref tuple 1)
-          (dict (bert-decode-dict (aref tuple 2)))
-          (t tuple))
-      tuple)))
-
 (defun bert-decode-tuple (struct)
   (let ((elements (bindat-get-field struct 'elements)))
     (apply #'vector (mapcar #'bert-decode elements))))
-
-(defun bert-decode-dict (table)
-  (let ((hash-table (make-hash-table)))
-    (dolist (row table hash-table)
-      (puthash (aref row 0) (aref row 1) hash-table))))
 
 (defun bert-decode-string (struct)
   (bindat-get-field struct 'characters))
@@ -235,20 +213,6 @@
   (should (equal (bert-pack "foo")
                  (unibyte-string 131 109 0 0 0 3 102 111 111))))
 
-(ert-deftest bert-pack-hash-table ()
-  "Test packing of hash-tables."
-  (should (equal (bert-pack (make-hash-table))
-                 (unibyte-string
-                  131 104 3 100 0 4 98 101 114 116 100 0 4 100 105 99 116
-                  106)))
-  (should (equal (bert-pack
-                  (let ((hash-table (make-hash-table)))
-                    (puthash 1 "a" hash-table)
-                    hash-table))
-                 (unibyte-string
-                  131 104 3 100 0 4 98 101 114 116 100 0 4 100 105 99 116
-                  108 0 0 0 1 104 2 97 1 109 0 0 0 1 97 106))))
-
 (ert-deftest bert-unpack-integer ()
   "Test unpacking of integers."
   (should (equal (bert-unpack (bert-pack     0))     0))
@@ -287,47 +251,11 @@
   (should (equal (bert-unpack (bert-pack (vector 1 (vector 2 3))))
                  (vector 1 (vector 2 3))))
   (should (equal (bert-unpack (bert-pack (vector 1 2.718 'foo)))
-                 (vector 1 2.718 'foo)))
-  (should (let ((obj (bert-unpack
-                      (bert-pack
-                       (vector 'bert
-                               'dict
-                               (list (vector 1 "a")
-                                     (vector 2 "b")))))))
-            (and (hash-table-p obj)
-                 (hash-table-count obj)
-                 (equal (gethash 1 obj) "a")
-                 (equal (gethash 2 obj) "b"))))
-  (should (equal (bert-unpack (bert-pack (vector 'bert 'true)))
-                 (vector 'bert 'true))))
+                 (vector 1 2.718 'foo))))
 
 (ert-deftest bert-unpack-string ()
   "Test unpacking of strings."
   (should (equal (bert-unpack (bert-pack "")) ""))
   (should (equal (bert-unpack (bert-pack "foo")) "foo")))
-
-(ert-deftest bert-unpack-hash-table ()
-  "Test unpacking of hash-tables."
-  (should (let ((obj (bert-unpack (bert-pack (make-hash-table)))))
-            (and (hash-table-p obj)
-                 (= (hash-table-count obj) 0))))
-  (should (let ((obj (bert-unpack
-                      (bert-pack
-                       (let ((hash-table (make-hash-table)))
-                         (puthash 1 "a" hash-table)
-                         hash-table)))))
-            (and (hash-table-p obj)
-                 (= (hash-table-count obj) 1)
-                 (equal (gethash 1 obj) "a"))))
-  (should (let ((obj (bert-unpack
-                      (bert-pack
-                       (let ((hash-table (make-hash-table)))
-                         (puthash 1 "a" hash-table)
-                         (puthash 2 "b" hash-table)
-                         hash-table)))))
-            (and (hash-table-p obj)
-                 (= (hash-table-count obj) 2)
-                 (equal (gethash 1 obj) "a")
-                 (equal (gethash 2 obj) "b")))))
 
 (provide 'bert)
