@@ -29,17 +29,45 @@
                 (digits vec (length)))
            (111 (length u32)
                 (sign u8)
-                (digits vec (length))))))
+                (digits vec (length)))))
+  "Structure specification of BERT without the magic number.
+
+See http://bert-rpc.org/ for more details.")
 
 (defun bert-pack (obj)
+  "Serialize OBJ as a BERT.
+
+The following Elisp types are supported:
+ - integers
+ - floats
+ - lists
+ - symbols
+ - vectors
+ - strings
+
+The Elisp NIL is encoded as an empty list rather than a symbol,
+BERT nil, or BERT false.
+
+Elisp vectors and strings are encoded as BERT tuples resp. BERT
+binaries.
+
+Complex types are not supported.  Encoding of complex types can
+be implemented as a thin layer on top of this library."
   (bindat-pack `((magic u8) ,@bert-bindat-spec)
                `((magic . 131) ,@(bert-encode obj))))
 
 (defadvice bert-pack (around bert-pack-around activate)
+  "Dynamically rebind `lsh' to `ash' in the body of `bert-pack'.
+
+This is really a hack allowing us to encode signed 30-bit Elisp
+integers as unsigned 32-bit integers in network order using
+`bindat--pack-u32' as prescribed by the BERT format."
   (letf (((symbol-function 'lsh) #'ash))
     ad-do-it))
 
 (defun bert-encode (obj)
+  "Encode OBJ as a structure conforming to the bindat
+specification of BERT given by `bert-bindat-spec'."
   (cond ((integerp     obj) (bert-encode-integer    obj))
         ((floatp       obj) (bert-encode-float      obj))
         ((listp        obj) (bert-encode-list       obj))
@@ -90,6 +118,18 @@
     (data . ,(string-to-vector string))))
 
 (defun bert-unpack (string)
+  "Deserialize a BERT from STRING.
+
+See the documentation of `bert-pack' for a list of supported
+types.
+
+Limitations:
+
+ - Elisp integers are 30-bit, and only integers of this size are
+   correctly decoded.
+
+ - BERT bignums are not supported because they are not supported
+   by the vanilla Emacs."
   (let* ((struct
           (bindat-unpack `((magic u8) ,@bert-bindat-spec) string))
          (magic (bindat-get-field struct 'magic)))
@@ -97,10 +137,19 @@
     (bert-decode struct)))
 
 (defadvice bert-unpack (around bert-unpack-around activate)
+  "Dynamically rebind `lsh' to `ash' in the body of `bert-unpack'.
+
+This is really a hack allowing us to decode signed 30-bit Elisp
+integers from unsigned 32-bit integers in network order using
+`bindat--unpack-u32' as prescribed by the BERT format."
   (letf (((symbol-function 'lsh) #'ash))
     ad-do-it))
 
 (defun bert-decode (struct)
+  "Decode STRUCT as an Elisp object.
+
+STRUCT is assumed to conform to the bindat specification given by
+`bert-bindat-spec'."
   (case (bindat-get-field struct 'tag)
     ((97 98)   (bert-decode-integer struct))
     (99        (bert-decode-float   struct))
@@ -137,6 +186,11 @@
 
 (defun bert-decode-binary (struct)
   (map 'string #'identity (bindat-get-field struct 'data)))
+
+;;; Tests
+
+;; All tests have been generated using Ruby BERT library:
+;; https://github.com/mojombo/bert
 
 (ert-deftest bert-pack-integer ()
   "Test packing of integers."
