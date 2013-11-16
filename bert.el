@@ -120,8 +120,7 @@ specification of BERT given by `bert-bindat-spec'."
 (defun bert-unpack (string)
   "Deserialize a BERT from STRING.
 
-See the documentation of `bert-pack' for a list of supported
-types.
+See the description of `bert-pack' for a list of supported types.
 
 Limitations:
 
