@@ -14,7 +14,7 @@ and supports the following Elisp types:
  - strings
 
 The Elisp `NIL` is encoded as an empty list rather than a BERT atom,
-BERT nil, or BERT false.
+BERT `nil`, or BERT `false`.
 
 Elisp vectors and strings are encoded as BERT tuples resp. BERT
 binaries.
