@@ -1,3 +1,56 @@
+;;; bert.el --- BERT serialization library for Emacs
+
+;; Copyright (C) 2013 Oleksandr Manzyuk <manzyuk@gmail.com>
+
+;; Author: Oleksandr Manzyuk <manzyuk@gmail.com>
+;; Version: 0.1
+;; Keywords: comm data
+
+;; This file is NOT part of GNU Emacs.
+
+;; This is free software; you can redistribute it and/or modify it
+;; under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 2, or (at your option)
+;; any later version.
+
+;; This file is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+;; General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; Translation to and from BERT (Binary ERlang Term) format.
+;;
+;; See the BERT specification at http://bert-rpc.org/.
+;;
+;; The library provides two functions, `bert-pack' and `bert-unpack',
+;; and supports the following Elisp types:
+;;  - integers
+;;  - floats
+;;  - lists
+;;  - symbols
+;;  - vectors
+;;  - strings
+;;
+;; The Elisp NIL is encoded as an empty list rather than a BERT atom,
+;; BERT nil, or BERT false.
+;;
+;; Elisp vectors and strings are encoded as BERT tuples resp. BERT
+;; binaries.
+;;
+;; Complex types are not supported.  Encoding and decoding of complex
+;; types can be implemented as a thin layer on top of this library.
+;;
+;; Because Elisp integers are 30-bit, only integers of this size can
+;; be correctly translated.  In particular, BERT bignums are not
+;; supported.
+
+;;; Code:
+
 (require 'bindat)
 (require 'ert)
 
@@ -312,3 +365,5 @@ STRUCT is assumed to conform to the bindat specification given by
   (should (equal (bert-unpack (bert-pack "foo")) "foo")))
 
 (provide 'bert)
+
+;;; bert.el ends here
