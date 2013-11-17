@@ -2,7 +2,7 @@
 
 Translation to and from BERT (Binary ERlang Term) format.
 
-See the BERT specification at (http://bert-rpc.org/).
+See the BERT specification at http://bert-rpc.org/.
 
 The library provides two functions, `bert-pack` and `bert-unpack`,
 and supports the following Elisp types:
