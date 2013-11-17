@@ -87,6 +87,7 @@
 
 See http://bert-rpc.org/ for more details.")
 
+;;;###autoload
 (defun bert-pack (obj)
   "Serialize OBJ as a BERT.
 
@@ -170,6 +171,7 @@ specification of BERT given by `bert-bindat-spec'."
     (length . ,(length string))
     (data . ,(string-to-vector string))))
 
+;;;###autoload
 (defun bert-unpack (string)
   "Deserialize a BERT from STRING.
 
